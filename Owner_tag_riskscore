@@ -1,11 +1,26 @@
+WITH cert_expiration_dates AS (
+   SELECT
+      DISTINCT asset_id,
+      service_id,
+      name,
+      value
+   FROM
+      dim_asset_service_configuration
+   WHERE
+      lower(name) LIKE '%ssl.cert.not.valid.after'
+)
+
 SELECT
     dt.tag_name AS "Tag Name",
     dt.tag_type AS "Tag Type",
-    cast(sum(fa.riskscore) AS BIGINT) AS "Risk Score"
+    cast(sum(fa.riskscore) AS BIGINT) AS "Risk Score",
+    count(fa.asset_id) AS "Total Assets",
+    sum(case when CURRENT_TIMESTAMP - cast(ced.value AS DATE) > INTERVAL '90 days' then 1 else 0 end) AS "Assets with Expired SSL Certificates"
 FROM
     dim_tag dt
     JOIN dim_tag_asset dta USING(tag_id)
     JOIN fact_asset fa USING(asset_id)
+    LEFT JOIN cert_expiration_dates ced ON fa.asset_id = ced.asset_id
 WHERE
     dt.tag_type = 'owner'
 GROUP BY
