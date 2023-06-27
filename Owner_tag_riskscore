@@ -14,7 +14,7 @@ vulnerability_data AS (
       asset_id,
       count(vulnerability_id) AS num_vulnerabilities
    FROM
-      dim_asset_vulnerability_instance
+      fact_asset_vulnerability_instance
    GROUP BY
       asset_id
 )
