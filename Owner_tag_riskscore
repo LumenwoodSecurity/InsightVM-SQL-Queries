@@ -45,7 +45,7 @@ WITH asset_vulnerabilities AS (
     SELECT
         da.asset_id,
         COUNT(dv.vulnerability_id) AS vulnerability_count,
-        MAX(CASE WHEN dv.exploit_count > 0 THEN 1 ELSE 0 END) AS has_vulnerability_with_known_exploit
+        SUM(CASE WHEN fav.known_exploit_count > 0 THEN 1 ELSE 0 END) AS vulnerabilities_with_known_exploits
     FROM
         dim_asset da
         JOIN fact_asset_vulnerability_instance fav USING(asset_id)
@@ -73,7 +73,7 @@ asset_tags AS (
         SUM(fa.riskscore) AS "Risk Score",
         SUM(av.vulnerability_count) AS "Total Vulnerabilities",
         AVG(av.vulnerability_count) AS "Average Vulnerabilities per Asset",
-        SUM(av.has_vulnerability_with_known_exploit) AS "Assets with Vulnerabilities with Known Exploits"
+        SUM(av.vulnerabilities_with_known_exploits) AS "Assets with Vulnerabilities with Known Exploits"
     FROM
         dim_tag dt
         JOIN dim_tag_asset dta USING(tag_id)
