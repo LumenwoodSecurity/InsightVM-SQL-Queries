@@ -41,59 +41,81 @@ GROUP BY
 ORDER BY
     "Risk Score" DESC
 ------------------------------------------------------------------------------------
-WITH cert_expiration_dates AS (
-   SELECT
-      DISTINCT asset_id,
-      service_id,
-      name,
-      value
-   FROM
-      dim_asset_service_configuration
-   WHERE
-      lower(name) LIKE '%ssl.cert.not.valid.after'
+WITH asset_vulnerabilities AS (
+    SELECT
+        da.asset_id,
+        COUNT(dv.vulnerability_id) AS vulnerability_count,
+        SUM(CASE WHEN dv.exploit_count > 0 THEN 1 ELSE 0 END) AS vulnerabilities_with_known_exploits
+    FROM
+        dim_asset da
+        JOIN fact_asset_vulnerability_instance fav USING(asset_id)
+        JOIN dim_vulnerability dv USING(vulnerability_id)
+    GROUP BY
+        da.asset_id
 ),
-vulnerability_data AS (
-   SELECT
-      asset_id,
-      count(vulnerability_id) AS num_vulnerabilities
-   FROM
-      fact_asset_vulnerability_instance
-   GROUP BY
-      asset_id
+cert_expiration_dates AS (
+    SELECT
+        DISTINCT asset_id,
+        service_id,
+        name,
+        value
+    FROM
+        dim_asset_service_configuration
+    WHERE
+        lower(name) LIKE '%ssl.cert.not.valid.after'
 ),
-vulnerability_exploit_data AS (
-   SELECT
-      asset_id,
-      count(vulnerability_id) AS num_vulnerabilities_with_exploit
-   FROM
-      fact_asset_vulnerability_instance
-   WHERE
-      exploit_count > 0
-   GROUP BY
-      asset_id
+asset_tags AS (
+    SELECT
+        dt.tag_name AS "Tag Name",
+        dt.tag_type AS "Tag Type",
+        COUNT(DISTINCT dta.asset_id) AS "Total Assets",
+        SUM(CASE WHEN CURRENT_TIMESTAMP - cast(ced.value AS DATE) <= INTERVAL '90 days' THEN 1 ELSE 0 END) AS "Assets with Expired SSL Certificates",
+        SUM(fa.riskscore) AS "Risk Score",
+        SUM(av.vulnerability_count) AS "Total Vulnerabilities",
+        AVG(av.vulnerability_count) AS "Average Vulnerabilities per Asset",
+        SUM(av.vulnerabilities_with_known_exploits) AS "Assets with Vulnerabilities with Known Exploits"
+    FROM
+        dim_tag dt
+        JOIN dim_tag_asset dta USING(tag_id)
+        JOIN fact_asset fa USING(asset_id)
+        LEFT JOIN asset_vulnerabilities av USING(asset_id)
+        LEFT JOIN cert_expiration_dates ced USING(asset_id)
+    WHERE
+        dt.tag_type = 'OWNER'
+    GROUP BY
+        dt.tag_name,
+        dt.tag_type
+),
+asset_vulnerability_counts AS (
+    SELECT
+        da.ip_address,
+        da.host_name,
+        COUNT(DISTINCT dv.title) AS vulnerability_count,
+        COUNT(DISTINCT CASE WHEN dv.vulnerabilities_with_exploit > 0 THEN dv.title END) AS vulnerabilities_with_exploit
+    FROM
+        dim_asset da
+        JOIN fact_asset_vulnerability_instance fav ON da.asset_id = fav.asset_id
+        JOIN dim_vulnerability dv ON fav.vulnerability_id = dv.vulnerability_id
+    GROUP BY
+        da.ip_address,
+        da.host_name
 )
-
 SELECT
-    dt.tag_name AS "Tag Name",
-    dt.tag_type AS "Tag Type",
-    cast(sum(fa.riskscore) AS BIGINT) AS "Risk Score",
-    count(fa.asset_id) AS "Total Assets",
-    sum(case when CURRENT_TIMESTAMP - cast(ced.value AS DATE) > INTERVAL '90 days' then 1 else 0 end) AS "Assets with Expired SSL Certificates",
-    coalesce(sum(vd.num_vulnerabilities), 0) AS "Total Vulnerabilities",
-    coalesce(avg(vd.num_vulnerabilities), 0) AS "Average Vulnerabilities per Asset",
-    coalesce(sum(ved.num_vulnerabilities_with_exploit), 0) AS "Vulnerabilities with Known Exploit"
+    avc.ip_address,
+    avc.host_name,
+    avc.vulnerability_count,
+    avc.vulnerabilities_with_exploit,
+    at."Tag Name",
+    at."Tag Type",
+    at."Total Assets",
+    at."Assets with Expired SSL Certificates",
+    at."Risk Score",
+    at."Total Vulnerabilities",
+    at."Average Vulnerabilities per Asset",
+    at."Assets with Vulnerabilities with Known Exploits"
 FROM
-    dim_tag dt
-    JOIN dim_tag_asset dta USING(tag_id)
-    JOIN fact_asset fa USING(asset_id)
-    LEFT JOIN cert_expiration_dates ced ON fa.asset_id = ced.asset_id
-    LEFT JOIN vulnerability_data vd ON fa.asset_id = vd.asset_id
-    LEFT JOIN vulnerability_exploit_data ved ON fa.asset_id = ved.asset_id
-WHERE
-    dt.tag_type = 'owner'
-GROUP BY
-    dt.tag_name,
-    dt.tag_type
+    asset_vulnerability_counts avc
+    JOIN asset_tags at ON 1=1 -- Cartesian product to combine all rows
 ORDER BY
-    "Risk Score" DESC
+    at."Risk Score" DESC;
 
