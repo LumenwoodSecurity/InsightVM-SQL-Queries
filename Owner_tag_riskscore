@@ -45,7 +45,7 @@ WITH asset_vulnerabilities AS (
     SELECT
         da.asset_id,
         COUNT(dv.vulnerability_id) AS vulnerability_count,
-        SUM(CASE WHEN dv.exploit_count > 0 THEN 1 ELSE 0 END) AS vulnerabilities_with_known_exploits
+        SUM(CASE WHEN dv.vulnerabilities_with_exploit > 0 THEN 1 ELSE 0 END) AS vulnerabilities_with_known_exploits
     FROM
         dim_asset da
         JOIN fact_asset_vulnerability_instance fav USING(asset_id)
@@ -69,7 +69,7 @@ asset_tags AS (
         dt.tag_name AS "Tag Name",
         dt.tag_type AS "Tag Type",
         COUNT(DISTINCT dta.asset_id) AS "Total Assets",
-        SUM(CASE WHEN CURRENT_TIMESTAMP - cast(ced.value AS DATE) <= INTERVAL '90 days' THEN 1 ELSE 0 END) AS "Assets with Expired SSL Certificates",
+        SUM(CASE WHEN CURRENT_TIMESTAMP - CAST(ced.value AS DATE) <= INTERVAL '90 days' THEN 1 ELSE 0 END) AS "Assets with Expired SSL Certificates",
         SUM(fa.riskscore) AS "Risk Score",
         SUM(av.vulnerability_count) AS "Total Vulnerabilities",
         AVG(av.vulnerability_count) AS "Average Vulnerabilities per Asset",
