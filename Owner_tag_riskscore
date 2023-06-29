@@ -45,7 +45,8 @@ WITH asset_vulnerabilities AS (
     SELECT
         da.asset_id,
         COUNT(dv.vulnerability_id) AS vulnerability_count,
-        SUM(CASE WHEN dv.vulnerabilities_with_exploit > 0 THEN 1 ELSE 0 END) AS vulnerabilities_with_known_exploits
+        SUM(CASE WHEN dv.exploit_count > 0 THEN 1 ELSE 0 END) AS vulnerabilities_with_known_exploits,
+        SUM(CASE WHEN dv.vulnerabilities_with_exploit > 0 THEN 1 ELSE 0 END) AS vulnerabilities_with_exploit
     FROM
         dim_asset da
         JOIN fact_asset_vulnerability_instance fav USING(asset_id)
@@ -69,11 +70,12 @@ asset_tags AS (
         dt.tag_name AS "Tag Name",
         dt.tag_type AS "Tag Type",
         COUNT(DISTINCT dta.asset_id) AS "Total Assets",
-        SUM(CASE WHEN CURRENT_TIMESTAMP - CAST(ced.value AS DATE) <= INTERVAL '90 days' THEN 1 ELSE 0 END) AS "Assets with Expired SSL Certificates",
+        SUM(CASE WHEN CURRENT_TIMESTAMP - cast(ced.value AS DATE) <= INTERVAL '90 days' THEN 1 ELSE 0 END) AS "Assets with Expired SSL Certificates",
         SUM(fa.riskscore) AS "Risk Score",
         SUM(av.vulnerability_count) AS "Total Vulnerabilities",
         AVG(av.vulnerability_count) AS "Average Vulnerabilities per Asset",
-        SUM(av.vulnerabilities_with_known_exploits) AS "Assets with Vulnerabilities with Known Exploits"
+        SUM(av.vulnerabilities_with_known_exploits) AS "Assets with Vulnerabilities with Known Exploits",
+        SUM(av.vulnerabilities_with_exploit) AS "Assets with Vulnerabilities with Exploits"
     FROM
         dim_tag dt
         JOIN dim_tag_asset dta USING(tag_id)
@@ -85,37 +87,8 @@ asset_tags AS (
     GROUP BY
         dt.tag_name,
         dt.tag_type
-),
-asset_vulnerability_counts AS (
-    SELECT
-        da.ip_address,
-        da.host_name,
-        COUNT(DISTINCT dv.title) AS vulnerability_count,
-        COUNT(DISTINCT CASE WHEN dv.vulnerabilities_with_exploit > 0 THEN dv.title END) AS vulnerabilities_with_exploit
-    FROM
-        dim_asset da
-        JOIN fact_asset_vulnerability_instance fav ON da.asset_id = fav.asset_id
-        JOIN dim_vulnerability dv ON fav.vulnerability_id = dv.vulnerability_id
-    GROUP BY
-        da.ip_address,
-        da.host_name
 )
-SELECT
-    avc.ip_address,
-    avc.host_name,
-    avc.vulnerability_count,
-    avc.vulnerabilities_with_exploit,
-    at."Tag Name",
-    at."Tag Type",
-    at."Total Assets",
-    at."Assets with Expired SSL Certificates",
-    at."Risk Score",
-    at."Total Vulnerabilities",
-    at."Average Vulnerabilities per Asset",
-    at."Assets with Vulnerabilities with Known Exploits"
-FROM
-    asset_vulnerability_counts avc
-    JOIN asset_tags at ON 1=1 -- Cartesian product to combine all rows
+SELECT * FROM asset_tags
 ORDER BY
-    at."Risk Score" DESC;
+    "Risk Score" DESC;
 
