@@ -45,12 +45,11 @@ WITH asset_vulnerabilities AS (
     SELECT
         da.asset_id,
         COUNT(dv.vulnerability_id) AS vulnerability_count,
-        COUNT(DISTINCT fe.exploit_id) AS vulnerabilities_with_known_exploits
+        COUNT(CASE WHEN fav.exploitable THEN 1 END) AS vulnerabilities_with_known_exploits
     FROM
         dim_asset da
         JOIN fact_asset_vulnerability_instance fav USING(asset_id)
         JOIN dim_vulnerability dv USING(vulnerability_id)
-        LEFT JOIN fact_exploit fe USING(vulnerability_id)
     GROUP BY
         da.asset_id
 ),
@@ -90,4 +89,3 @@ asset_tags AS (
 SELECT * FROM asset_tags
 ORDER BY
     "Risk Score" DESC;
-
