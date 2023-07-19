@@ -190,3 +190,64 @@ SELECT * FROM asset_tags
 ORDER BY
     "Risk Score" DESC
 LIMIT 10;
+---------------------------------------------
+WITH
+asset_risk AS (
+  SELECT
+    da.asset_id,
+    da.riskscore
+  FROM
+    dim_asset da
+),
+asset_vulnerability AS (
+  SELECT
+    fav.asset_id,
+    COUNT(fav.vulnerability_id) AS vulnerability_count
+  FROM
+    fact_asset_vulnerability fav
+  GROUP BY
+    fav.asset_id
+),
+asset_vulnerability_severity AS (
+  SELECT
+    favs.asset_id,
+    COUNT(favs.vulnerability_id) AS high_severity_vulnerability_count
+  FROM
+    fact_asset_vulnerability_severity favs
+  WHERE
+    favs.severity_level = 'High'
+  GROUP BY
+    favs.asset_id
+),
+riskiest_assets AS (
+  SELECT
+    ar.asset_id,
+    ar.riskscore
+  FROM
+    asset_risk ar
+  ORDER BY
+    ar.riskscore DESC
+  LIMIT 10
+)
+SELECT
+  da.ip_address,
+  da.host_name,
+  ar.riskscore,
+  av.vulnerability_count,
+  avs.high_severity_vulnerability_count,
+  CASE
+    WHEN ra.asset_id IS NOT NULL THEN 'Yes'
+    ELSE 'No'
+  END AS is_riskiest
+FROM
+  dim_asset da
+LEFT JOIN
+  asset_risk ar ON da.asset_id = ar.asset_id
+LEFT JOIN
+  asset_vulnerability av ON da.asset_id = av.asset_id
+LEFT JOIN
+  asset_vulnerability_severity avs ON da.asset_id = avs.asset_id
+LEFT JOIN
+  riskiest_assets ra ON da.asset_id = ra.asset_id
+ORDER BY
+  ar.riskscore DESC;
