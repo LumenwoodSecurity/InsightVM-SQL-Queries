@@ -150,3 +150,54 @@ asset_tags AS (
 SELECT * FROM asset_tags
 ORDER BY
     "Total Risk Score" DESC;
+---------------------------------------------------------------
+Updated 30d Spec
+---------------------------------------------------------------
+WITH asset_vulnerabilities AS (
+    SELECT
+        da.asset_id,
+        COUNT(dv.vulnerability_id) AS vulnerability_count,
+        COUNT(CASE WHEN fav.exploitable THEN 1 END) AS vulnerabilities_with_known_exploits
+    FROM
+        dim_asset da
+        JOIN fact_asset_vulnerability_instance fav USING(asset_id)
+        JOIN dim_vulnerability dv USING(vulnerability_id)
+    GROUP BY
+        da.asset_id
+),
+cert_expiration_dates AS (
+    SELECT
+        DISTINCT asset_id,
+        service_id,
+        name,
+        value
+    FROM
+        dim_asset_service_configuration
+    WHERE
+        lower(name) LIKE '%ssl.cert.not.valid.after'
+),
+asset_tags AS (
+    SELECT
+        dt.tag_name AS "Tag Name",
+        dt.tag_type AS "Tag Type",
+        COUNT(DISTINCT dta.asset_id) AS "Total Assets",
+        SUM(CASE WHEN CURRENT_TIMESTAMP - cast(ced.value AS DATE) <= INTERVAL '90 days' THEN 1 ELSE 0 END) AS "Assets with Expired SSL Certificates",
+        SUM(fa.riskscore) AS "Risk Score",
+        SUM(av.vulnerability_count) AS "Total Vulnerabilities",
+        AVG(av.vulnerability_count) AS "Average Vulnerabilities per Asset",
+        SUM(av.vulnerabilities_with_known_exploits) AS "Assets with Vulnerabilities with Known Exploits"
+    FROM
+        dim_tag dt
+        JOIN dim_tag_asset dta USING(tag_id)
+        JOIN fact_asset fa USING(asset_id)
+        LEFT JOIN asset_vulnerabilities av USING(asset_id)
+        LEFT JOIN cert_expiration_dates ced USING(asset_id)
+    WHERE
+        dt.tag_type = 'OWNER'
+    GROUP BY
+        dt.tag_name,
+        dt.tag_type
+)
+SELECT * FROM asset_tags
+ORDER BY
+    "Risk Score" DESC;
