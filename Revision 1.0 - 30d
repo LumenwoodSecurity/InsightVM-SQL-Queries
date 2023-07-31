@@ -42,7 +42,7 @@ asset_tags AS (
         LEFT JOIN cert_expiration_dates ced USING(asset_id)
     WHERE
         dt.tag_id = :tag_id
-        AND fa.date >= (CURRENT_DATE - INTERVAL '30 days')
+        AND fa.asset_last_assessed_for_vulnerabilities_timestamp >= (CURRENT_DATE - INTERVAL '30 days')
     GROUP BY
         dt.tag_name,
         dt.tag_type
