@@ -8,7 +8,7 @@ WITH asset_vulnerabilities AS (
         JOIN fact_asset_vulnerability_instance fav USING(asset_id)
         JOIN dim_vulnerability dv USING(vulnerability_id)
     WHERE
-        da.last_seen >= DATEADD(day, -30, GETDATE())
+        fav.date >= (CURRENT_DATE - INTERVAL '30 days')
     GROUP BY
         da.asset_id
 ),
@@ -21,15 +21,14 @@ cert_expiration_dates AS (
     FROM
         dim_asset_service_configuration
     WHERE
-        lower(name) LIKE '%ssl.cert.not.valid.after' AND
-        last_seen >= DATEADD(day, -30, GETDATE())
+        lower(name) LIKE '%ssl.cert.not.valid.after'
 ),
 asset_tags AS (
     SELECT
         dt.tag_name AS "Tag Name",
         dt.tag_type AS "Tag Type",
         COUNT(DISTINCT dta.asset_id) AS "Total Assets",
-        SUM(CASE WHEN CURRENT_TIMESTAMP - cast(ced.value AS DATE) <= INTERVAL '90 days' THEN 1 ELSE 0 END) AS "Assets with Expired SSL Certificates",
+        SUM(CASE WHEN CURRENT_TIMESTAMP - cast(ced.value AS DATE) <= INTERVAL '30 days' THEN 1 ELSE 0 END) AS "Assets with Expired SSL Certificates",
         SUM(fa.riskscore) AS "Total Risk Score",
         AVG(fa.riskscore) AS "Average Risk Score per Asset",
         SUM(av.vulnerability_count) AS "Total Vulnerabilities",
@@ -42,7 +41,8 @@ asset_tags AS (
         LEFT JOIN asset_vulnerabilities av USING(asset_id)
         LEFT JOIN cert_expiration_dates ced USING(asset_id)
     WHERE
-        dt.tag_id = :PLACEHOLDER
+        dt.tag_id = :tag_id
+        AND fa.date >= (CURRENT_DATE - INTERVAL '30 days')
     GROUP BY
         dt.tag_name,
         dt.tag_type
