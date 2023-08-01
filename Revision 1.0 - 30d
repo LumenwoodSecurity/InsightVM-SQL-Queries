@@ -53,8 +53,7 @@ ORDER BY
 WITH asset_vulnerabilities AS (
     SELECT
         fav.asset_id,
-        COUNT(dv.vulnerability_id) AS vulnerability_count,
-        COUNT(CASE WHEN dv.exploits <> 0 THEN 1 END) AS vulnerabilities_with_known_exploits
+        COUNT(dv.vulnerability_id) AS vulnerability_count
     FROM
         fact_asset_vulnerability_instance fav
         JOIN dim_vulnerability dv USING(vulnerability_id)
@@ -72,15 +71,6 @@ cert_expiration_dates AS (
     WHERE
         lower(name) LIKE '%ssl.cert.not.valid.after'
 ),
-asset_risk_scores AS (
-    SELECT
-        fa.asset_id,
-        SUM(fa.riskscore) AS asset_risk_score
-    FROM
-        fact_asset fa
-    GROUP BY
-        fa.asset_id
-),
 asset_tags AS (
     SELECT
         dt.tag_id,
@@ -88,19 +78,22 @@ asset_tags AS (
         dt.tag_type AS "Tag Type",
         COUNT(DISTINCT dta.asset_id) AS "Total Assets",
         SUM(CASE WHEN CURRENT_TIMESTAMP - cast(ced.value AS DATE) <= INTERVAL '30 days' THEN 1 ELSE 0 END) AS "Assets with Expired SSL Certificates",
-        SUM(ars.asset_risk_score) AS "Total Risk Score",
-        AVG(ars.asset_risk_score) AS "Average Risk Score per Asset",
+        SUM(fa.riskscore) AS "Total Risk Score",
+        AVG(fa.riskscore) AS "Average Risk Score per Asset",
         SUM(av.vulnerability_count) AS "Total Vulnerabilities",
         AVG(av.vulnerability_count) AS "Average Vulnerabilities per Asset",
-        SUM(av.vulnerabilities_with_known_exploits) AS "Assets with Vulnerabilities with Known Exploits"
+        SUM(CASE WHEN dv.exploits <> 0 THEN 1 ELSE 0 END) AS "Assets with Vulnerabilities with Known Exploits"
     FROM
         dim_tag dt
         JOIN dim_tag_asset dta USING(tag_id)
-        JOIN asset_risk_scores ars USING(asset_id)
+        JOIN fact_asset fa USING(asset_id)
         LEFT JOIN asset_vulnerabilities av USING(asset_id)
         LEFT JOIN cert_expiration_dates ced USING(asset_id)
+        LEFT JOIN fact_asset_vulnerability_instance fav USING(asset_id)
+        LEFT JOIN dim_vulnerability dv USING(vulnerability_id)
     WHERE
         dt.tag_id = :tag_id
+        AND fav.date >= (CURRENT_DATE - INTERVAL '30 days')
     GROUP BY
         dt.tag_id,
         dt.tag_name,
@@ -109,3 +102,4 @@ asset_tags AS (
 SELECT * FROM asset_tags
 ORDER BY
     "Total Risk Score" DESC;
+
