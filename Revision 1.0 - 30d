@@ -52,23 +52,20 @@ ORDER BY
 ------------------------------------------------------Works but indiscrepency with risk score -------------------------------------------
 WITH asset_vulnerabilities AS (
     SELECT
-        da.asset_id,
+        fav.asset_id,
         COUNT(dv.vulnerability_id) AS vulnerability_count,
         COUNT(CASE WHEN dv.exploits <> 0 THEN 1 END) AS vulnerabilities_with_known_exploits
     FROM
-        dim_asset da
-        JOIN fact_asset_vulnerability_instance fav USING(asset_id)
+        fact_asset_vulnerability_instance fav
         JOIN dim_vulnerability dv USING(vulnerability_id)
     WHERE
         fav.date >= (CURRENT_DATE - INTERVAL '30 days')
     GROUP BY
-        da.asset_id
+        fav.asset_id
 ),
 cert_expiration_dates AS (
     SELECT
         DISTINCT asset_id,
-        service_id,
-        name,
         value
     FROM
         dim_asset_service_configuration
@@ -77,6 +74,7 @@ cert_expiration_dates AS (
 ),
 asset_tags AS (
     SELECT
+        dt.tag_id,
         dt.tag_name AS "Tag Name",
         dt.tag_type AS "Tag Type",
         COUNT(DISTINCT dta.asset_id) AS "Total Assets",
@@ -94,8 +92,8 @@ asset_tags AS (
         LEFT JOIN cert_expiration_dates ced USING(asset_id)
     WHERE
         dt.tag_id = :tag_id
-        AND fa.asset_last_assessed_for_vulnerabilities >= (CURRENT_DATE - INTERVAL '30 days')
     GROUP BY
+        dt.tag_id,
         dt.tag_name,
         dt.tag_type
 )
