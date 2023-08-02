@@ -224,7 +224,7 @@ WITH asset_vulnerabilities AS (
         fact_asset_vulnerability_instance fav
         JOIN dim_vulnerability dv USING(vulnerability_id)
     WHERE
-        fav.date BETWEEN (CURRENT_DATE - INTERVAL '60 days') AND (CURRENT_DATE - INTERVAL '30 days') -- 30 days ago
+        fav.date = (CURRENT_DATE - INTERVAL '30 days') -- exactly 30 days ago
     GROUP BY
         fav.asset_id
 ),
@@ -235,7 +235,7 @@ cert_expiration_dates AS (
         dim_asset_service_configuration
     WHERE
         lower(name) LIKE '%ssl.cert.not.valid.after'
-        AND (CURRENT_TIMESTAMP - INTERVAL '60 days') - cast(value AS DATE) <= INTERVAL '30 days' -- 30 days ago
+        AND CURRENT_TIMESTAMP - (cast(value AS DATE) + INTERVAL '30 days') = INTERVAL '30 days' -- exactly 30 days ago
 ),
 tag_assets AS (
     SELECT
@@ -268,3 +268,4 @@ GROUP BY
     dt.tag_type
 ORDER BY
     "Total Risk Score" DESC;
+
