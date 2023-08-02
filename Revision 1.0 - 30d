@@ -222,7 +222,6 @@ WITH asset_vulnerabilities AS (
         COUNT(DISTINCT fav.vulnerability_id) AS vulnerability_count
     FROM
         fact_asset_vulnerability_instance fav
-        JOIN dim_vulnerability dv USING(vulnerability_id)
     WHERE
         fav.date = (CURRENT_DATE - INTERVAL '30 days') -- exactly 30 days ago
     GROUP BY
@@ -235,7 +234,7 @@ cert_expiration_dates AS (
         dim_asset_service_configuration
     WHERE
         lower(name) LIKE '%ssl.cert.not.valid.after'
-        AND CURRENT_TIMESTAMP - (cast(value AS DATE) + INTERVAL '30 days') = INTERVAL '30 days' -- exactly 30 days ago
+        AND cast(value AS DATE) = (CURRENT_DATE - INTERVAL '30 days') -- exactly 30 days ago
 ),
 tag_assets AS (
     SELECT
@@ -268,4 +267,5 @@ GROUP BY
     dt.tag_type
 ORDER BY
     "Total Risk Score" DESC;
+
 
