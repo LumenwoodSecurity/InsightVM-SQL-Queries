@@ -166,7 +166,7 @@ ORDER BY
 WITH asset_vulnerabilities AS (
     SELECT
         fav.asset_id,
-        COUNT(dv.vulnerability_id) AS vulnerability_count
+        COUNT(DISTINCT fav.vulnerability_id) AS vulnerability_count -- Counting distinct vulnerability IDs
     FROM
         fact_asset_vulnerability_instance fav
         JOIN dim_vulnerability dv USING(vulnerability_id)
@@ -183,11 +183,20 @@ cert_expiration_dates AS (
     WHERE
         lower(name) LIKE '%ssl.cert.not.valid.after'
         AND CURRENT_TIMESTAMP - cast(value AS DATE) <= INTERVAL '30 days'
+),
+tag_assets AS (
+    SELECT
+        DISTINCT dta.asset_id
+    FROM
+        dim_tag dt
+        JOIN dim_tag_asset dta USING(tag_id)
+    WHERE
+        dt.tag_id = :tag_id
 )
 SELECT
     dt.tag_name AS "Tag Name",
     dt.tag_type AS "Tag Type",
-    COUNT(DISTINCT dta.asset_id) AS "Total Assets",
+    COUNT(DISTINCT ta.asset_id) AS "Total Assets",
     COUNT(DISTINCT ced.asset_id) AS "Assets with Expired SSL Certificates",
     SUM(fa.riskscore) AS "Total Risk Score",
     AVG(fa.riskscore) AS "Average Risk Score per Asset",
@@ -195,10 +204,10 @@ SELECT
     AVG(av.vulnerability_count) AS "Average Vulnerabilities per Asset"
 FROM
     dim_tag dt
-    JOIN dim_tag_asset dta USING(tag_id)
-    JOIN fact_asset fa USING(asset_id)
-    LEFT JOIN asset_vulnerabilities av ON fa.asset_id = av.asset_id
-    LEFT JOIN cert_expiration_dates ced ON fa.asset_id = ced.asset_id
+    JOIN tag_assets ta ON dt.tag_id = :tag_id
+    LEFT JOIN fact_asset fa ON ta.asset_id = fa.asset_id
+    LEFT JOIN asset_vulnerabilities av ON ta.asset_id = av.asset_id
+    LEFT JOIN cert_expiration_dates ced ON ta.asset_id = ced.asset_id
 WHERE
     dt.tag_id = :tag_id
 GROUP BY
