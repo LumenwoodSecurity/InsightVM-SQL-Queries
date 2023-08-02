@@ -215,4 +215,3 @@ GROUP BY
     dt.tag_type
 ORDER BY
     "Total Risk Score" DESC;
-
