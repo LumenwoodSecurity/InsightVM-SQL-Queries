@@ -234,7 +234,8 @@ cert_expiration_dates AS (
         dim_asset_service_configuration
     WHERE
         lower(name) LIKE '%ssl.cert.not.valid.after'
-        AND cast(value AS DATE) = (CURRENT_DATE - INTERVAL '30 days') -- exactly 30 days ago
+        AND cast(value AS DATE) > (CURRENT_DATE - INTERVAL '30 days') -- valid 30 days ago
+        AND cast(value AS DATE) <= CURRENT_DATE -- but not valid now
 ),
 tag_assets AS (
     SELECT
@@ -267,5 +268,6 @@ GROUP BY
     dt.tag_type
 ORDER BY
     "Total Risk Score" DESC;
+
 
 
