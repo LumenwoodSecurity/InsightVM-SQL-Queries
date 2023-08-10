@@ -1,7 +1,3 @@
-SELECT
-    scan_id AS "Scan ID"
-FROM
-    fact_scan
-WHERE
-    scan_finished >= (CURRENT_DATE - INTERVAL '30 days')
-    AND scan_finished < CURRENT_DATE;
+SELECT column_name
+FROM information_schema.columns
+WHERE table_name = 'fact_scan';
