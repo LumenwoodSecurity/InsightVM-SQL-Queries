@@ -268,6 +268,58 @@ GROUP BY
     dt.tag_type
 ORDER BY
     "Total Risk Score" DESC;
-
+-------------------------------------
+WITH asset_vulnerabilities AS (
+    SELECT
+        fav.asset_id,
+        COUNT(DISTINCT fav.vulnerability_id) AS vulnerability_count -- Counting distinct vulnerability IDs
+    FROM
+        fact_asset_vulnerability_instance fav
+        JOIN dim_vulnerability dv USING(vulnerability_id)
+    WHERE
+        fav.scan_id IN (8968, 8969, 8970, 8971, 8972, 8973, 8974, 8975, 8976, 8977, 8978, 8979, 8980, 8981, 8982, 8983, 8984, 8985, 8986, 8987, 8988, 8989, 8990, 8991, 8992, 8993, 8994, 8995, 8996, 8997, 8998, 8999, 9000, 9001, 9002, 9003, 9004, 9005, 9006, 9007, 9008, 9009, 9010, 9011, 9012, 9013, 9014, 9015, 9016, 9017, 9018, 9019, 9020, 9021, 9022, 9023, 9024, 9025, 9026, 9027, 9028, 9029, 9030, 9031, 9032, 9033, 9034, 9035, 9036, 9037, 9038, 9039, 9040, 9041, 9042, 9043, 9044, 9045, 9046, 9047, 9048, 9049, 9050, 9051, 9052, 9053, 9054, 9055, 9056, 9057, 9058, 9059, 9060, 9061, 9062, 9063, 9064, 9065, 9066, 9067, 9068, 9069, 9070, 9071, 9072, 9073, 9074, 9075, 9076, 9077, 9078, 9079, 9080, 9081, 9082, 9083, 9084, 9085, 9086, 9087, 9088, 9089, 9090, 9091, 9092, 9093, 9094, 9095, 9096, 9097, 9098, 9099, 9100, 9101, 9102, 9103, 9104, 9105, 9106, 9107, 9108, 9109, 9110, 9111, 9112, 9113, 9114, 9115, 9116, 9117, 9118, 9119, 9120, 9121, 9122, 9123, 9124, 9125, 9126, 9127, 9128, 9129, 9130, 9131, 9132, 9133, 9134, 9135, 9136, 9137, 9138, 9139, 9140, 9141, 9142, 9143, 9144, 9145, 9146, 9147, 9148, 9149)
+    GROUP BY
+        fav.asset_id
+),
+cert_expiration_dates AS (
+    SELECT
+        DISTINCT asset_id
+    FROM
+        dim_asset_service_configuration
+    WHERE
+        lower(name) LIKE '%ssl.cert.not.valid.after'
+        AND CURRENT_TIMESTAMP - cast(value AS DATE) <= INTERVAL '30 days'
+),
+tag_assets AS (
+    SELECT
+        DISTINCT dta.asset_id
+    FROM
+        dim_tag dt
+        JOIN dim_tag_asset dta USING(tag_id)
+    WHERE
+        dt.tag_id = :tag_id
+)
+SELECT
+    dt.tag_name AS "Tag Name",
+    dt.tag_type AS "Tag Type",
+    COUNT(DISTINCT ta.asset_id) AS "Total Assets",
+    COUNT(DISTINCT ced.asset_id) AS "Assets with Expired SSL Certificates",
+    SUM(fa.riskscore) AS "Total Risk Score",
+    AVG(fa.riskscore) AS "Average Risk Score per Asset",
+    SUM(av.vulnerability_count) AS "Total Vulnerabilities",
+    AVG(av.vulnerability_count) AS "Average Vulnerabilities per Asset"
+FROM
+    dim_tag dt
+    JOIN tag_assets ta ON dt.tag_id = :tag_id
+    LEFT JOIN fact_asset fa ON ta.asset_id = fa.asset_id
+    LEFT JOIN asset_vulnerabilities av ON ta.asset_id = av.asset_id
+    LEFT JOIN cert_expiration_dates ced ON ta.asset_id = ced.asset_id
+WHERE
+    dt.tag_id = :tag_id
+GROUP BY
+    dt.tag_name,
+    dt.tag_type
+ORDER BY
+    "Total Risk Score" DESC;
 
 
