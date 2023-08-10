@@ -403,7 +403,7 @@ tag_assets AS (
         dim_tag dt
         JOIN dim_tag_asset dta USING(tag_id)
     WHERE
-        dt.tag_id = :tag_id
+        dt.tag_id = 31
 )
 SELECT
     dt.tag_name AS "Tag Name",
@@ -416,14 +416,15 @@ SELECT
     AVG(av.vulnerability_count) AS "Average Vulnerabilities per Asset"
 FROM
     dim_tag dt
-    JOIN tag_assets ta ON dt.tag_id = :tag_id
+    JOIN tag_assets ta ON dt.tag_id = 31
     LEFT JOIN fact_asset fa ON ta.asset_id = fa.asset_id
     LEFT JOIN asset_vulnerabilities av ON ta.asset_id = av.asset_id
     LEFT JOIN cert_expiration_dates ced ON ta.asset_id = ced.asset_id
 WHERE
-    dt.tag_id = :tag_id
+    dt.tag_id = 31
 GROUP BY
     dt.tag_name,
     dt.tag_type
 ORDER BY
     "Total Risk Score" DESC;
+
