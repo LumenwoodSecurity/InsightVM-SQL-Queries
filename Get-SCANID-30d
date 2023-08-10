@@ -4,4 +4,4 @@ FROM
     fact_scan
 WHERE
     scan_finished >= (CURRENT_DATE - INTERVAL '30 days')
-    AND scan_finished < CURRENT_DAT
+    AND scan_finished < CURRENT_DATE;
