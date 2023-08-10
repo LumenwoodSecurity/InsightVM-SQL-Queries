@@ -1,3 +1,3 @@
-SELECT scan_name, scan_date
-FROM scans
-WHERE scan_date >= DATEADD(DAY, -30, GETDATE());
+SELECT scan_id
+FROM dim_asset_scan
+WHERE scan_started >= NOW() - INTERVAL '30 days';
