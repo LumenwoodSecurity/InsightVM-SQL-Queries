@@ -10,3 +10,8 @@ SELECT scan_id, MIN(scan_started) AS scan_date
 FROM dim_asset_scan
 WHERE scan_started >= CURRENT_TIMESTAMP - INTERVAL '30 days'
 GROUP BY scan_id;
+-----------------------------
+SELECT scan_id, TO_CHAR(MIN(scan_started), 'YYYY-MM-DD HH24:MI:SS') AS scan_date
+FROM dim_asset_scan
+WHERE scan_started >= CURRENT_TIMESTAMP - INTERVAL '30 days'
+GROUP BY scan_id;
