@@ -1,8 +1,7 @@
 SELECT
-    fs.scan_id AS "Scan ID"
+    scan_id AS "Scan ID"
 FROM
-    fact_scan fs
-    JOIN dim_date dd ON fs.date_id = dd.date_id
+    fact_scan
 WHERE
-    dd.date >= (CURRENT_DATE - INTERVAL '30 days')
-    AND dd.date < CURRENT_DATE;
+    scan_finished >= (CURRENT_DATE - INTERVAL '30 days')
+    AND scan_finished < CURRENT_DAT
