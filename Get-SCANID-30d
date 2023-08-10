@@ -2,7 +2,6 @@ SELECT scan_id
 FROM dim_asset_scan
 WHERE scan_started >= NOW() - INTERVAL '30 days';
 ---------------------------
-SELECT scan_id, scan_started
+SELECT DISTINCT scan_id
 FROM dim_asset_scan
-ORDER BY scan_started DESC
-LIMIT 10;
+WHERE scan_started >= CURRENT_TIMESTAMP - INTERVAL '30 days';
