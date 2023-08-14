@@ -625,3 +625,33 @@ WHERE
     das.scan_id IN (
         -- List of scan IDs here
     );
+
+---------------------------
+SELECT
+    fav.asset_id,
+    COUNT(DISTINCT fav.vulnerability_id) AS vulnerability_count
+FROM
+    fact_asset_vulnerability_instance fav
+    JOIN (
+        -- Subquery to identify assets related to the specified tag ID
+        SELECT
+            DISTINCT dta.asset_id
+        FROM
+            dim_tag dt
+            JOIN dim_tag_asset dta USING(tag_id)
+        WHERE
+            dt.tag_id = :tag_id
+    ) ta ON fav.asset_id = ta.asset_id
+    JOIN (
+        -- Subquery to identify assets related to the specified scan IDs
+        SELECT
+            DISTINCT das.asset_id
+        FROM
+            dim_asset_scan das
+        WHERE
+            das.scan_id IN (
+                -- List of scan IDs here
+            )
+    ) sa ON fav.asset_id = sa.asset_id
+GROUP BY
+    fav.asset_id;
