@@ -655,3 +655,76 @@ FROM
     ) sa ON fav.asset_id = sa.asset_id
 GROUP BY
     fav.asset_id;
+----------
+WITH specific_assets AS (
+    SELECT asset_id
+    FROM (
+        VALUES
+            (asset_id_1),
+            (asset_id_2)
+            -- More asset IDs here
+    ) AS sa (asset_id)
+),
+scan_assets AS (
+    SELECT
+        DISTINCT das.asset_id
+    FROM
+        dim_asset_scan das
+    WHERE
+        das.scan_id IN (
+            scan_id_1, scan_id_2
+            -- List of scan IDs here
+        )
+),
+tag_assets AS (
+    SELECT
+        DISTINCT dta.asset_id
+    FROM
+        dim_tag dt
+        JOIN dim_tag_asset dta USING(tag_id)
+        JOIN specific_assets sa ON dta.asset_id = sa.asset_id
+    WHERE
+        dt.tag_id = :tag_id
+),
+asset_vulnerabilities AS (
+    SELECT
+        fav.asset_id,
+        COUNT(DISTINCT fav.vulnerability_id) AS vulnerability_count
+    FROM
+        fact_asset_vulnerability_instance fav
+        JOIN tag_assets ta ON fav.asset_id = ta.asset_id
+        JOIN scan_assets sa ON fav.asset_id = sa.asset_id
+    GROUP BY
+        fav.asset_id
+),
+cert_expiration_dates AS (
+    SELECT
+        DISTINCT asset_id
+    FROM
+        dim_asset_service_configuration
+    WHERE
+        lower(name) LIKE '%ssl.cert.not.valid.after'
+        AND CURRENT_TIMESTAMP - cast(value AS DATE) <= INTERVAL '30 days'
+)
+SELECT
+    dt.tag_name AS "Tag Name",
+    dt.tag_type AS "Tag Type",
+    COUNT(DISTINCT ta.asset_id) AS "Total Assets",
+    COUNT(DISTINCT ced.asset_id) AS "Assets with Expired SSL Certificates",
+    SUM(fa.riskscore) AS "Total Risk Score",
+    AVG(fa.riskscore) AS "Average Risk Score per Asset",
+    SUM(av.vulnerability_count) AS "Total Vulnerabilities",
+    AVG(av.vulnerability_count) AS "Average Vulnerabilities per Asset"
+FROM
+    dim_tag dt
+    JOIN tag_assets ta ON dt.tag_id = :tag_id
+    LEFT JOIN fact_asset fa ON ta.asset_id = fa.asset_id
+    LEFT JOIN asset_vulnerabilities av ON ta.asset_id = av.asset_id
+    LEFT JOIN cert_expiration_dates ced ON ta.asset_id = ced.asset_id
+WHERE
+    dt.tag_id = :tag_id
+GROUP BY
+    dt.tag_name,
+    dt.tag_type
+ORDER BY
+    "Total Risk Score" DESC;
