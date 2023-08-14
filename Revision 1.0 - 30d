@@ -605,4 +605,23 @@ GROUP BY
     dt.tag_type
 ORDER BY
     "Total Risk Score" DESC;
+------------------------
+trouble shooting
+-------------
+SELECT
+    DISTINCT dta.asset_id
+FROM
+    dim_tag dt
+    JOIN dim_tag_asset dta USING(tag_id)
+WHERE
+    dt.tag_id = :tag_id;
 
+------------
+SELECT
+    DISTINCT das.asset_id
+FROM
+    dim_asset_scan das
+WHERE
+    das.scan_id IN (
+        -- List of scan IDs here
+    );
