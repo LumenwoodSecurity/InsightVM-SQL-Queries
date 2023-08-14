@@ -655,7 +655,7 @@ FROM
     ) sa ON fav.asset_id = sa.asset_id
 GROUP BY
     fav.asset_id;
-----------
+---------- WORKING-------------
 WITH specific_assets AS (
     SELECT asset_id
     FROM (
@@ -686,6 +686,18 @@ tag_assets AS (
     WHERE
         dt.tag_id = :tag_id
 ),
+worst_assets AS (
+    SELECT
+        fa.asset_id,
+        da.host_name
+    FROM
+        fact_asset fa
+        JOIN dim_asset da ON fa.asset_id = da.asset_id
+        JOIN tag_assets ta ON fa.asset_id = ta.asset_id
+    ORDER BY
+        fa.riskscore DESC
+    LIMIT 10
+),
 asset_vulnerabilities AS (
     SELECT
         fav.asset_id,
@@ -714,13 +726,15 @@ SELECT
     SUM(fa.riskscore) AS "Total Risk Score",
     AVG(fa.riskscore) AS "Average Risk Score per Asset",
     SUM(av.vulnerability_count) AS "Total Vulnerabilities",
-    AVG(av.vulnerability_count) AS "Average Vulnerabilities per Asset"
+    AVG(av.vulnerability_count) AS "Average Vulnerabilities per Asset",
+    ARRAY_AGG(wa.host_name) AS "Top 10 Worst Assets by Risk Score"
 FROM
     dim_tag dt
     JOIN tag_assets ta ON dt.tag_id = :tag_id
     LEFT JOIN fact_asset fa ON ta.asset_id = fa.asset_id
     LEFT JOIN asset_vulnerabilities av ON ta.asset_id = av.asset_id
     LEFT JOIN cert_expiration_dates ced ON ta.asset_id = ced.asset_id
+    LEFT JOIN worst_assets wa ON ta.asset_id = wa.asset_id
 WHERE
     dt.tag_id = :tag_id
 GROUP BY
@@ -728,3 +742,5 @@ GROUP BY
     dt.tag_type
 ORDER BY
     "Total Risk Score" DESC;
+
+
