@@ -31,34 +31,15 @@ SELECT DISTINCT scan_id
 FROM dim_asset_scan
 WHERE DATE_TRUNC('month', scan_started) = '2021-06-01';
 -----
-WITH tag_assets AS (
-    SELECT
-        DISTINCT dta.asset_id
-    FROM
-        dim_tag dt
-        JOIN dim_tag_asset dta USING(tag_id)
-    WHERE
-        dt.tag_id = :tag_id
-),
-scan_assets AS (
-    SELECT
-        DISTINCT das.asset_id
-    FROM
-        dim_asset_scan das
-    WHERE
-        das.scan_date_column >= '2023-06-01'
-        AND das.scan_date_column < '2023-07-01'
-),
-filtered_assets AS (
-    SELECT
-        ta.asset_id
-    FROM
-        tag_assets ta
-        JOIN scan_assets sa ON ta.asset_id = sa.asset_id
-)
 SELECT
-    fa.asset_id
+    dta.asset_id
 FROM
-    filtered_assets fa;
+    dim_tag_asset dta
+JOIN
+    dim_asset da ON dta.asset_id = da.asset_id
+WHERE
+    dta.tag_id = :tag_id
+    AND EXTRACT(YEAR FROM da.date_last_assessed) = 2023
+    AND EXTRACT(MONTH FROM da.date_last_assessed) = 6;
 
 
