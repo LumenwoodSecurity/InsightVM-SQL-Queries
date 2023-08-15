@@ -48,28 +48,26 @@ WHERE
 
 
 
-
 WITH tag_assets AS (
     SELECT
-        DISTINCT dta.asset_id
+        dta.asset_id
     FROM
         dim_tag dt
-    JOIN dim_tag_asset dta ON dt.tag_id = dta.tag_id
+        JOIN dim_tag_asset dta ON dt.tag_id = dta.tag_id
     WHERE
         dt.tag_id = :tag_id
 ),
-scan_assets AS (
+scan_dates AS (
     SELECT
-        DISTINCT das.asset_id
+        das.asset_id
     FROM
         dim_asset_scan das
-    JOIN dim_scan ds ON das.scan_id = ds.scan_id
     WHERE
-        EXTRACT(MONTH FROM ds.scan_start) = 6
-        AND EXTRACT(YEAR FROM ds.scan_start) = 2023
+        EXTRACT(YEAR FROM das.date) = 2023
+        AND EXTRACT(MONTH FROM das.date) = 6
 )
 SELECT
     ta.asset_id
 FROM
     tag_assets ta
-JOIN scan_assets sa ON ta.asset_id = sa.asset_id;
+    JOIN scan_dates sd ON ta.asset_id = sd.asset_id;
