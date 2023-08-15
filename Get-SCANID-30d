@@ -49,7 +49,6 @@ WHERE
 
 
 
-
 WITH tag_assets AS (
     SELECT
         DISTINCT dta.asset_id
@@ -66,8 +65,8 @@ scan_assets AS (
         dim_asset_scan das
     JOIN dim_scan ds ON das.scan_id = ds.scan_id
     WHERE
-        EXTRACT(MONTH FROM ds.date) = 6
-        AND EXTRACT(YEAR FROM ds.date) = 2023
+        EXTRACT(MONTH FROM ds.scan_start) = 6
+        AND EXTRACT(YEAR FROM ds.scan_start) = 2023
 )
 SELECT
     ta.asset_id
