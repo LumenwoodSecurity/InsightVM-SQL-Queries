@@ -32,16 +32,13 @@ FROM dim_asset_scan
 WHERE DATE_TRUNC('month', scan_started) = '2021-06-01';
 -----
 SELECT
-    dta.asset_id,
-    da.asset_name,
-    dta.date_added
+    dta.asset_id
 FROM
     dim_tag dt
 JOIN
     dim_tag_asset dta ON dt.tag_id = dta.tag_id
-JOIN
-    dim_asset da ON dta.asset_id = da.asset_id
 WHERE
     dt.tag_id = :tag_id
     AND EXTRACT(YEAR FROM dta.date_added) = 2023
     AND EXTRACT(MONTH FROM dta.date_added) = 6;
+
