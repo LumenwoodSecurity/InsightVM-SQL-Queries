@@ -742,5 +742,15 @@ GROUP BY
     dt.tag_type
 ORDER BY
     "Total Risk Score" DESC;
+-----------------
+SELECT
+    DISTINCT dta.asset_id
+FROM
+    dim_tag dt
+    JOIN dim_tag_asset dta USING(tag_id)
+WHERE
+    dt.tag_id = :tag_id
+    AND dta.date >= '2022-06-01'
+    AND dta.date <= '2022-06-30';
 
 
