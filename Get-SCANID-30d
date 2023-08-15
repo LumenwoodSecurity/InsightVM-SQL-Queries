@@ -42,14 +42,21 @@ WHERE
     AND EXTRACT(YEAR FROM da.date_last_assessed) = 2023
     AND EXTRACT(MONTH FROM da.date_last_assessed) = 6;
 
+
+
+
+
+
+
+
+
 SELECT
     dta.asset_id
 FROM
     dim_tag_asset dta
 JOIN
-    dim_asset da ON dta.asset_id = da.asset_id
+    dim_asset_scan das ON dta.asset_id = das.asset_id
 WHERE
     dta.tag_id = :tag_id
-    AND EXTRACT(YEAR FROM da.date_last_assessed) = 2023
-    AND EXTRACT(MONTH FROM da.date_last_assessed) = 6;
-
+    AND EXTRACT(YEAR FROM das.date) = 2023
+    AND EXTRACT(MONTH FROM das.date) = 6;
