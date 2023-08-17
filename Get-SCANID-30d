@@ -47,7 +47,6 @@ WHERE
 
 
 
-
 WITH tag_assets AS (
     SELECT
         dta.asset_id
@@ -59,15 +58,23 @@ WITH tag_assets AS (
 ),
 scan_dates AS (
     SELECT
-        das.asset_id
+        date_id
     FROM
-        dim_asset_scan das
+        dim_date
     WHERE
-        EXTRACT(YEAR FROM das.date) = 2023
-        AND EXTRACT(MONTH FROM das.date) = 6
+        EXTRACT(YEAR FROM "date") = 2023
+        AND EXTRACT(MONTH FROM "date") = 6
+),
+scanned_assets AS (
+    SELECT
+        fas.asset_id
+    FROM
+        fact_asset_scan fas
+        JOIN scan_dates sd ON fas.date_id = sd.date_id
 )
 SELECT
     ta.asset_id
 FROM
     tag_assets ta
-    JOIN scan_dates sd ON ta.asset_id = sd.asset_id;
+    JOIN scanned_assets sa ON ta.asset_id = sa.asset_id;
+
